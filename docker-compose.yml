@@ -1,0 +1,86 @@
+version: "3"
+services:
+    pg-tasks:
+        container_name: pg-tasks
+        image: postgres:9.6
+        ports:
+            - 5433:5432
+        environment: 
+            - POSTGRES_DB=tasks
+            - POSTGRES_PASSWORD=password
+    sonarqube:
+        container_name: sonar
+        image: sonarqube:7.9.2-community
+        ports:
+            - "9000:9000"
+        networks:
+            - sonarnet
+        environment:
+            - sonar.jdbc.url=jdbc:postgresql://pg-sonar:5432/sonar
+        depends_on:
+            - pg-sonar
+        volumes:
+            - sonarqube_conf:/opt/sonarqube/conf
+            - sonarqube_data:/opt/sonarqube/data
+            - sonarqube_extensions:/opt/sonarqube/extensions
+            - sonarqube_bundled-plugins:/opt/sonarqube/lib/bundled-plugins
+ 
+    pg-sonar:
+        container_name: pg-sonar
+        image: postgres:9.6
+        networks:
+            - sonarnet
+        environment:
+            - POSTGRES_USER=sonar
+            - POSTGRES_PASSWORD=sonar
+        volumes:
+            - postgresql:/var/lib/postgresql
+            - postgresql_data:/var/lib/postgresql/data
+
+    jenkins:
+        image: jenkins/jenkins:lts
+        build: jenkins/
+        container_name: "jenkins"
+        ports:
+            - "2020:8080"
+        volumes:
+            - jenkins_data:/bitnami/jenkins
+            - /path/to/jenkins-persistence:/bitnami/jenkins
+
+    nginx:
+        image: nginx:latest
+        container_name: "nginx"
+        environment:
+            - TZ=America/Sao_Paulo
+        ports:
+            - "80:80"
+        restart: always
+        working_dir: /var/www
+        volumes:
+            - ./nginx/conf.d:/etc/nginx/conf.d
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+            - /var/log/nginx:/var/log/nginx 
+
+    portainer:
+        image: portainer/portainer:latest
+        container_name: "portainer"
+        restart: always
+        ports:
+            - "81:9000"
+        command: -H unix:///var/run/docker.sock
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - portainer_data:/data
+
+networks:
+    sonarnet:
+ 
+volumes:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_bundled-plugins:
+  postgresql:
+  postgresql_data:
+  jenkins_data:
+  portainer_data:
